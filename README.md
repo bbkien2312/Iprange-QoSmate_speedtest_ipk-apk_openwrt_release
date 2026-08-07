@@ -14,7 +14,7 @@
 - Nhập dải IPv4 dạng `192.168.1.10-192.168.1.60`
 - Đơn vị giới hạn `MB/s`, `Mbps`, `KB/s`, `Kbps`
 - Giao diện LuCI: `Network → QoSmate → Speed Test`
-- Speed test bằng `speedtestpp` hoặc `librespeed-cli`
+- Speed test chỉ dùng `speedtestcpp` (`/usr/bin/speedtest`)
 - Kết quả ping, jitter, download, upload và trạng thái RPC
 - OpenWrt 24.x (`opkg`/`.ipk`) và 25.x (`apk`/`.apk`)
 
@@ -63,7 +63,7 @@ Trên router 24.x:
 ```sh
 opkg update
 opkg install tc-full ip-full kmod-ifb kmod-sched-cake \
-  kmod-sched-ctinfo kmod-sched-red kmod-veth librespeed-cli
+  kmod-sched-ctinfo kmod-sched-red kmod-veth
 opkg install /tmp/qosmate_*.ipk /tmp/luci-app-qosmate_*.ipk
 /etc/init.d/rpcd restart
 /etc/init.d/uhttpd restart
@@ -134,8 +134,8 @@ Bản fork giữ nguyên engine shaping của QoSmate gốc và bổ sung:
   `0`, không phải lỗi.
 - Statistics trả trạng thái disabled rõ ràng khi không có qdisc. Muốn có counter
   queue phải đặt Download/Upload Rate lớn hơn 0 rồi Save & Apply.
-- Speed Test dùng `speedtestcpp` (binary `speedtest`) nếu có; nút Setup tự ẩn
-  sau khi trạng thái chuyển thành `OK`.
+- Speed Test chỉ dùng `speedtestcpp` (binary `speedtest`); nút Setup tự ẩn sau
+  khi trạng thái chuyển thành `OK`.
 
 ### Cài một dòng SSH từ Git
 
@@ -184,7 +184,7 @@ router root không mật khẩu ra WAN.
 | Dải dùng chung một tổng tốc độ | Không có sẵn | Có Shared range |
 | Fair Share theo host đang hoạt động | Không có UI riêng | Có `shared_fair` dựa trên CAKE host isolation |
 | Đơn vị MB/s, Mbps, KB/s, Kbps | Thường nhập kbit/s | Có chuyển đổi tự động |
-| Speed test trên router | Không có trong bản gốc đang dùng | Có speedtestcpp và LibreSpeed fallback |
+| Speed test trên router | Không có trong bản gốc đang dùng | Có speedtestcpp |
 | Server Việt Nam/quốc tế | Không có | Có dropdown và Automatic |
 | Nút setup speedtestcpp | Không có | Có; `OK` thì tự ẩn |
 | Health action | Kiểm tra cơ bản | Có nút sửa Service/Nft/Tc/Config/Packages/integrity |

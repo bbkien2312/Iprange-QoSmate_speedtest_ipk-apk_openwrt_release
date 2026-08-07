@@ -139,20 +139,12 @@ Bản fork giữ nguyên engine shaping của QoSmate gốc và bổ sung:
 
 ### Cài một dòng SSH từ Git
 
-Đẩy hai package trong `dist-standard/` lên repository GitHub public rồi thay
-`OWNER/REPO` bằng repository thật trong lệnh dưới đây:
+Repository release public:
 
-```powershell
-git init
-git add AGENTS.md README.md docs tools vendor dist dist-standard
-git commit -m "QoSmate fork with speedtestcpp and health actions"
-git branch -M main
-git remote add origin https://github.com/OWNER/REPO.git
-git push -u origin main
-```
+`https://github.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release`
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/OWNER/REPO/main/tools/install_from_git.sh | sh
+wget -qO- https://raw.githubusercontent.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release/main/install_from_git.sh | sh
 ```
 
 Installer tự nhận `opkg` (OpenWrt 24.x) hoặc `apk` (OpenWrt 25.x), tải package

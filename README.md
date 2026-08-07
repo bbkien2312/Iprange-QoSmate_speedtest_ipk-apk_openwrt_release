@@ -118,10 +118,12 @@ Ví dụ `5 MB/s` tương đương `40 Mbps` hoặc `40000 Kbps`.
 ## Speed Test trên LuCI
 
 Vào `Network → QoSmate → Speed Test`, chọn `Automatic` hoặc một server trong
-dropdown (Singapore, Tokyo, Prague, Frankfurt, New York, Los Angeles), rồi bấm
-`Start speed test`. Có thể chọn `Custom server ID` để nhập ID khác. Trạng thái
-được cập nhật tự động. Kết quả là tốc độ của router qua WAN; nó không đại diện
-riêng cho một client LAN.
+dropdown theo nhóm Việt Nam, châu Á (Singapore, Nhật, Úc, Trung Quốc, Hong Kong,
+Đài Loan, Thái Lan, Philippines, Indonesia, Ấn Độ, Trung Á, Nga), châu Âu, Mỹ,
+châu Phi, rồi bấm `Start speed test`. Có thể chọn `Custom Ookla host:port` để
+nhập endpoint khác. Trạng thái được cập nhật tự động. Kết quả là tốc độ của
+router qua WAN; nó không đại diện riêng cho một client LAN. Host cố định có thể
+tạm thời không phản hồi, nên dùng `Automatic` nếu gặp lỗi.
 
 ## Phần bổ sung của bản fork
 

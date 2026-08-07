@@ -208,3 +208,8 @@ không có conntrack, IP vẫn hiện nhưng live rate không khả dụng.
 Ghi chú Fair Share và Burst Factor nằm trong khối thu gọn phía trên bảng. Fair Share
 cần Root Qdisc CAKE và Host Isolation; Burst Factor `0` là strict, `1.0` xấp xỉ một
 giây burst ban đầu.
+## Nhận biết phiên bản fork trong Settings
+
+Tab `Network → QoSmate → Settings` hiển thị `QoSmate fork build` cùng phiên bản,
+commit Git ngắn và thời điểm build ở ngay phía trên Version & Updates. Metadata
+được tạo tự động khi đóng gói `.ipk` hoặc `.apk`.

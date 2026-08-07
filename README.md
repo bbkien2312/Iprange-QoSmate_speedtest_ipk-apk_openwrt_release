@@ -10,7 +10,7 @@
 - `per_ip`: mỗi IP có một bucket giới hạn riêng
 - `shared_range`: cả dải IP dùng chung một bucket
 - Download/upload độc lập
-- Chế độ `Per-IP` hoặc `Shared range`
+- Chế độ `Per-IP`, `Shared range` hoặc `Shared range - Fair Share`
 - Nhập dải IPv4 dạng `192.168.1.10-192.168.1.60`
 - Đơn vị giới hạn `MB/s`, `Mbps`, `KB/s`, `Kbps`
 - Giao diện LuCI: `Network → QoSmate → Speed Test`
@@ -86,15 +86,32 @@ Trước khi cài trên router:
 
 Xem [docs/testing.md](docs/testing.md) và [docs/changelog.md](docs/changelog.md).
 
+`shared_fair`: dải IP dùng chung, được đưa vào CAKE child queue riêng và host-isolation chia đều.
+
 ## Cấu hình Rate Limits trên LuCI
 
 Vào `Network → QoSmate → Rate Limits`, tạo rule mới:
 
 1. Nhập IP, CIDR hoặc dải IPv4 ở `Target Devices`.
-2. Chọn `Per-IP` để mỗi địa chỉ có một bucket riêng, hoặc `Shared range` để
-   toàn bộ target dùng chung một bucket.
+2. Chọn `Per-IP` để mỗi địa chỉ có một bucket riêng, `Shared range` để toàn bộ
+   target dùng chung một bucket, hoặc `Shared range - Fair Share` để CAKE chia
+   lại cho các IP đang truyền. Fair Share không có Newcomer Reserve 10%.
 3. Nhập giá trị Download/Upload và chọn đơn vị tương ứng.
 4. Bật rule rồi Save & Apply.
+
+Với Fair Share, vào `Basic Settings`, chọn `Root Qdisc = cake` và trong tab
+`CAKE` giữ `Host Isolation = enabled`. Backend tạo parent HTB theo Basic rate,
+child CAKE riêng cho dải và class mặc định cho IP ngoài dải. IPv4 cụ thể được
+phân loại trực tiếp; IPv6, IP set động hoặc nhiều Fair Share rule dùng nft fallback.
+
+### Lịch sử triển khai Fair Share (2026-08-07)
+
+- Đã build `.ipk` cho OpenWrt 24.x và `.apk` cho OpenWrt 25.x; APK cũng chứa
+  trang Rate Limits để hiển thị lựa chọn Fair Share.
+- Đã cài thử trên `10.5.0.1:22191`; backend tạo child target-only và class mặc định
+  cho IP ngoài dải. Test `0/0` trả `tc:off`, sau đó cấu hình Fair Share được khôi phục.
+- Speedtest router đạt `316.90 Mbps` và đi vào class mặc định; cần client thật trong
+  dải 10–59 để đo giới hạn 10 MB/s và chia đều giữa nhiều IP.
 
 Ví dụ `5 MB/s` tương đương `40 Mbps` hoặc `40000 Kbps`.
 
@@ -163,6 +180,7 @@ router root không mật khẩu ra WAN.
 | Một IP | Có tính năng cơ bản | Có Per-IP rõ ràng |
 | Dải `192.168.1.10-192.168.1.60` | Không có sẵn | Có mở rộng dải IPv4 |
 | Dải dùng chung một tổng tốc độ | Không có sẵn | Có Shared range |
+| Fair Share theo host đang hoạt động | Không có UI riêng | Có `shared_fair` dựa trên CAKE host isolation |
 | Đơn vị MB/s, Mbps, KB/s, Kbps | Thường nhập kbit/s | Có chuyển đổi tự động |
 | Speed test trên router | Không có trong bản gốc đang dùng | Có speedtestcpp và LibreSpeed fallback |
 | Server Việt Nam/quốc tế | Không có | Có dropdown và Automatic |

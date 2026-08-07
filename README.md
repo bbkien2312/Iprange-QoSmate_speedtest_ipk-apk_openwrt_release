@@ -197,3 +197,14 @@ router root không mật khẩu ra WAN.
 `Basic Settings` chỉ là trần shaping. Trên Xiaomi Mi Router 3G, CAKE ở mức trần
 cao vẫn xử lý toàn bộ lưu lượng WAN/IFB và có thể làm giảm download. Nếu cần full
 speed, stop/disable QoSmate; không dùng `800000`/`2000000` với mục đích “tăng tốc”.
+## View Clients trong Rate Limits
+
+Rate Limits hiển thị dải IP ở dạng rút gọn, ví dụ `192.168.0.10–192.168.0.60`.
+Nút `View Clients` mở danh sách từng IP trong rule, hostname/MAC nếu router biết,
+trạng thái Active/Online/Unused, số connection và tốc độ Download/Upload mẫu theo
+conntrack. Tốc độ cập nhật khoảng 3 giây; mẫu đầu tiên có thể là `—`. Nếu kernel
+không có conntrack, IP vẫn hiện nhưng live rate không khả dụng.
+
+Ghi chú Fair Share và Burst Factor nằm trong khối thu gọn phía trên bảng. Fair Share
+cần Root Qdisc CAKE và Host Isolation; Burst Factor `0` là strict, `1.0` xấp xỉ một
+giây burst ban đầu.

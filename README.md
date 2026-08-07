@@ -189,3 +189,9 @@ router root không mật khẩu ra WAN.
 | Statistics khi không có qdisc | Có thể blank/lỗi | Trả `status=disabled` và hướng dẫn |
 | Updater upstream | Có thể cập nhật bản gốc | Tắt để bảo vệ phần fork |
 | Đóng gói | Theo upstream/feed | Có `.ipk` chuẩn và `.apk` thử nghiệm |
+
+### Lưu ý hiệu năng CAKE trên MT7621
+
+`Basic Settings` chỉ là trần shaping. Trên Xiaomi Mi Router 3G, CAKE ở mức trần
+cao vẫn xử lý toàn bộ lưu lượng WAN/IFB và có thể làm giảm download. Nếu cần full
+speed, stop/disable QoSmate; không dùng `800000`/`2000000` với mục đích “tăng tốc”.

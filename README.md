@@ -213,3 +213,6 @@ giây burst ban đầu.
 Tab `Network → QoSmate → Settings` hiển thị `QoSmate fork build` cùng phiên bản,
 commit Git ngắn và thời điểm build ở ngay phía trên Version & Updates. Metadata
 được tạo tự động khi đóng gói `.ipk` hoặc `.apk`.
+Sau khi cài thành công, installer tự xóa thư mục tạm `/tmp/qosmate-fork`. Dùng
+`QOSMATE_KEEP_STAGE=1` nếu cần giữ package để debug; file cấu hình và manifest
+integrity của QoSmate vẫn được giữ nguyên.

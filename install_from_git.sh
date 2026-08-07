@@ -6,6 +6,7 @@
 # Update an existing installation with shaping kept off:
 #   QOSMATE_ENABLE=0 sh -c "$(wget -qO- https://raw.githubusercontent.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release/main/install_from_git.sh)"
 # Optional: QOSMATE_REPO_URL=https://github.com/me/qosmate QOSMATE_REF=main sh install_from_git.sh
+# Optional debug: QOSMATE_KEEP_STAGE=1 keeps /tmp/qosmate-fork after a successful install.
 
 set -eu
 
@@ -77,5 +78,14 @@ if [ "${QOSMATE_ENABLE:-0}" = "1" ]; then
     /etc/init.d/qosmate restart
 fi
 
-echo "QoSmate fork installed. Packages are staged in $stage."
+if [ "${QOSMATE_KEEP_STAGE:-0}" = "1" ]; then
+    echo "Keeping $stage because QOSMATE_KEEP_STAGE=1."
+else
+    # Packages are already installed; remove only this installer-owned staging
+    # directory.  On an earlier install failure set -e exits before this point,
+    # leaving the files available for troubleshooting.
+    rm -rf "$stage"
+fi
+
+echo "QoSmate fork installed. Temporary staging cleanup completed."
 echo "Set QOSMATE_ENABLE=1 only when you want the QoSmate service enabled at boot."

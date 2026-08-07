@@ -1,220 +1,151 @@
-# OpenWrt QoSmate IP Limit + Speed Test
+# QoSmate IP Limit + Speed Test — Hướng dẫn sử dụng
 
-Ứng dụng LuCI mở rộng cho QoSmate, phục vụ giới hạn tốc độ theo IP/dải IP và
-đo tốc độ mạng trực tiếp từ router.
+Bản fork LuCI cho OpenWrt, dùng để giới hạn download/upload theo IP hoặc dải
+IPv4 và chạy speed test trực tiếp từ WAN của router.
 
-## Tính năng
+## Cài đặt hoặc cập nhật
 
-- IP đơn: `192.168.1.45`
-- Dải IP: `192.168.1.10-192.168.1.60`
-- `per_ip`: mỗi IP có một bucket giới hạn riêng
-- `shared_range`: cả dải IP dùng chung một bucket
-- Download/upload độc lập
-- Chế độ `Per-IP`, `Shared range` hoặc `Shared range - Fair Share`
-- Nhập dải IPv4 dạng `192.168.1.10-192.168.1.60`
-- Đơn vị giới hạn `MB/s`, `Mbps`, `KB/s`, `Kbps`
-- Giao diện LuCI: `Network → QoSmate → Speed Test`
-- Speed test chỉ dùng `speedtestcpp` (`/usr/bin/speedtest`)
-- Kết quả ping, jitter, download, upload và trạng thái RPC
-- OpenWrt 24.x (`opkg`/`.ipk`) và 25.x (`apk`/`.apk`)
-
-## Kiến trúc source
-
-```text
-vendor/qosmate/              backend QoSmate fork
-vendor/luci-app-qosmate/     LuCI fork và trang Speed Test
-tools/bootstrap.ps1          tạo .venv
-tools/build_sdk_packages.ps1 build .ipk bằng SDK
-tools/build_packages.py      build artifact thử nghiệm
-docs/                        kiến trúc, test, changelog
-dist-standard/               package chuẩn từ ipkg-build
-.venv/                       công cụ Python, không commit
-```
-
-## Chuẩn bị môi trường
-
-```powershell
-.\tools\bootstrap.ps1
-.\.venv\Scripts\Activate.ps1
-```
-
-SDK OpenWrt phải đúng target/version. Không dùng package của target khác.
-
-## Build OpenWrt 24.x
-
-### Cách đọc môi trường chạy lệnh
-
-- Lệnh có nhãn `MÁY TÍNH - PowerShell/CMD` chạy trên máy Windows chứa source.
-- Lệnh có nhãn `ROUTER - SSH` chạy sau khi đăng nhập vào OpenWrt.
-- Không có ký hiệu `IR` bắt buộc phải dùng công cụ riêng; `PS`/`CMD` chỉ là
-  PowerShell/Command Prompt để build, còn `sh` là shell trên router để cài.
-
-```powershell
-.\tools\build_sdk_packages.ps1
-```
-
-Kết quả trong `dist-standard/`:
-
-- `qosmate_*_all.ipk`
-- `luci-app-qosmate_*_all.ipk`
-
-Trên router 24.x:
-
-```sh
-opkg update
-opkg install tc-full ip-full kmod-ifb kmod-sched-cake \
-  kmod-sched-ctinfo kmod-sched-red kmod-veth
-opkg install /tmp/qosmate_*.ipk /tmp/luci-app-qosmate_*.ipk
-/etc/init.d/rpcd restart
-/etc/init.d/uhttpd restart
-```
-
-## Build OpenWrt 25.x
-
-Dùng SDK/Buildroot 25.x tương ứng để tạo `.apk`; không đổi đuôi `.ipk` thủ
-công. Cài package bằng `apk`, sau đó kiểm tra dependency và chữ ký package.
-
-## Kiểm thử an toàn
-
-Trước khi cài trên router:
-
-1. Kiểm tra phiên bản, kiến trúc và kernel.
-2. Backup `/etc/config` và danh sách package.
-3. Chỉ cài dependency đúng kernel.
-4. Kiểm tra LuCI/RPC/speed test trước khi bật shaping.
-5. Chưa enable QoSmate hoặc áp dụng rule giới hạn nếu chưa có kết quả test.
-
-Xem [docs/testing.md](docs/testing.md) và [docs/changelog.md](docs/changelog.md).
-
-`shared_fair`: dải IP dùng chung, được đưa vào CAKE child queue riêng và host-isolation chia đều.
-
-## Cấu hình Rate Limits trên LuCI
-
-Vào `Network → QoSmate → Rate Limits`, tạo rule mới:
-
-1. Nhập IP, CIDR hoặc dải IPv4 ở `Target Devices`.
-2. Chọn `Per-IP` để mỗi địa chỉ có một bucket riêng, `Shared range` để toàn bộ
-   target dùng chung một bucket, hoặc `Shared range - Fair Share` để CAKE chia
-   lại cho các IP đang truyền. Fair Share không có Newcomer Reserve 10%.
-3. Nhập giá trị Download/Upload và chọn đơn vị tương ứng.
-4. Bật rule rồi Save & Apply.
-
-Với Fair Share, vào `Basic Settings`, chọn `Root Qdisc = cake` và trong tab
-`CAKE` giữ `Host Isolation = enabled`. Backend tạo parent HTB theo Basic rate,
-child CAKE riêng cho dải và class mặc định cho IP ngoài dải. IPv4 cụ thể được
-phân loại trực tiếp; IPv6, IP set động hoặc nhiều Fair Share rule dùng nft fallback.
-
-### Lịch sử triển khai Fair Share (2026-08-07)
-
-- Đã build `.ipk` cho OpenWrt 24.x và `.apk` cho OpenWrt 25.x; APK cũng chứa
-  trang Rate Limits để hiển thị lựa chọn Fair Share.
-- Đã cài thử trên `10.5.0.1:22191`; backend tạo child target-only và class mặc định
-  cho IP ngoài dải. Test `0/0` trả `tc:off`, sau đó cấu hình Fair Share được khôi phục.
-- Speedtest router đạt `316.90 Mbps` và đi vào class mặc định; cần client thật trong
-  dải 10–59 để đo giới hạn 10 MB/s và chia đều giữa nhiều IP.
-
-Ví dụ `5 MB/s` tương đương `40 Mbps` hoặc `40000 Kbps`.
-
-## Speed Test trên LuCI
-
-Vào `Network → QoSmate → Speed Test`, chọn `Automatic` hoặc một server trong
-dropdown theo nhóm Việt Nam, châu Á (Singapore, Nhật, Úc, Trung Quốc, Hong Kong,
-Đài Loan, Thái Lan, Philippines, Indonesia, Ấn Độ, Trung Á, Nga), châu Âu, Mỹ,
-châu Phi, rồi bấm `Start speed test`. Có thể chọn `Custom Ookla host:port` để
-nhập endpoint khác. Trạng thái được cập nhật tự động. Kết quả là tốc độ của
-router qua WAN; nó không đại diện riêng cho một client LAN. Host cố định có thể
-tạm thời không phản hồi, nên dùng `Automatic` nếu gặp lỗi.
-
-## Phần bổ sung của bản fork
-
-Bản fork giữ nguyên engine shaping của QoSmate gốc và bổ sung:
-
-- Nút health cho Service, Nft, Tc, Config, Packages và integrity. Nút chỉ hiện
-  khi kiểm tra trả `!`/`x`; khi `OK` thì tự ẩn. Package sửa lỗi được lấy từ
-  `/tmp/qosmate-fork`, không gọi updater upstream.
-- `Tc:off` và "Shaping disabled" là thông tin khi hai rate Basic Settings bằng
-  `0`, không phải lỗi.
-- Statistics trả trạng thái disabled rõ ràng khi không có qdisc. Muốn có counter
-  queue phải đặt Download/Upload Rate lớn hơn 0 rồi Save & Apply.
-- Speed Test chỉ dùng `speedtestcpp` (binary `speedtest`); nút Setup tự ẩn sau
-  khi trạng thái chuyển thành `OK`.
-
-### Cài một dòng SSH từ Git
-
-Repository release public:
-
-`https://github.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release`
+Áp dụng cho OpenWrt 24.x (`opkg`) và 25.x (`apk`). Đăng nhập SSH vào router rồi
+chạy:
 
 ```sh
 wget -qO- https://raw.githubusercontent.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release/main/install_from_git.sh | sh
 ```
 
-Để cập nhật fork đang có lên phiên bản mới nhất, giữ cấu hình và không bật
-shaping:
+Để cập nhật bản mới mà giữ cấu hình và không tự bật shaping:
 
 ```sh
 QOSMATE_ENABLE=0 sh -c "$(wget -qO- https://raw.githubusercontent.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release/main/install_from_git.sh)"
 ```
 
-Chỉ dùng `QOSMATE_ENABLE=1` nếu muốn cập nhật xong rồi restart service và áp dụng
-shaping hiện tại.
+Sau khi cài, mở `Network → QoSmate`. Nếu giao diện cũ còn cache, nhấn
+`Ctrl+F5` hoặc đăng xuất/đăng nhập lại LuCI.
 
-Installer tự nhận `opkg` (OpenWrt 24.x) hoặc `apk` (OpenWrt 25.x), tải package
-vào `/tmp/qosmate-fork`, cài đặt rồi restart `rpcd`/`uhttpd`. Script không ghi
-đè UCI và không tự bật shaping. Muốn bật service, đặt `QOSMATE_ENABLE=1`.
-Với `apk`, script dùng artifact trong `dist/` từ `python tools/build_packages.py`;
-với `opkg`, dùng package SDK trong `dist-standard/`.
+Ứng dụng không flash firmware và không sửa bootloader. Tuy nhiên, shaping có
+thể làm giảm tốc độ hoặc gián đoạn Internet trong lúc áp dụng; nên giữ SSH LAN
+để rollback.
 
-Repository private không dùng được raw URL không xác thực. Dùng GitHub Release
-hoặc server nội bộ nếu cần private. Không đưa mật khẩu router/token vào Git.
-Ghi chú build/test nằm trong `AGENTS.md` và `docs/changelog.md`.
+## Basic Settings
 
-Ứng dụng không flash firmware và không ghi bootloader. Tuy vậy, rule nftables/tc
-sai có thể làm mất Internet tạm thời. Luôn giữ SSH LAN để rollback và không mở
-## Safety warning
+Trong `Network → QoSmate → Settings`:
 
-router root không mật khẩu ra WAN.
+1. Chọn đúng WAN interface, thường là `wan`.
+2. Nhập Download/Upload Rate theo `kbps`.
+3. Đặt cả hai rate bằng `0` để tắt shaping tổng; trạng thái `Tc:off` và WAN
+   `noqueue` trong trường hợp này là bình thường.
+4. Chọn Root Qdisc. Dùng `CAKE` khi cần `Shared range - Fair Share`.
+5. Bấm `Save & Apply`.
 
-## So sánh QoSmate gốc và bản fork
+Rate Basic Settings là trần shaping của toàn WAN, không làm đường truyền ISP
+nhanh hơn. Muốn router chạy không giới hạn, đặt `0/0` và tắt các rule Rate
+Limits đang bật.
 
-| Hạng mục | QoSmate gốc | Bản fork này |
-|---|---|---|
-| HFSC/CAKE/HTB, IFB, nftables, DSCP | Có | Giữ nguyên |
-| Shaping tổng theo WAN | Có | Giữ nguyên |
-| Một IP | Có tính năng cơ bản | Có Per-IP rõ ràng |
-| Dải `192.168.1.10-192.168.1.60` | Không có sẵn | Có mở rộng dải IPv4 |
-| Dải dùng chung một tổng tốc độ | Không có sẵn | Có Shared range |
-| Fair Share theo host đang hoạt động | Không có UI riêng | Có `shared_fair` dựa trên CAKE host isolation |
-| Đơn vị MB/s, Mbps, KB/s, Kbps | Thường nhập kbit/s | Có chuyển đổi tự động |
-| Speed test trên router | Không có trong bản gốc đang dùng | Có speedtestcpp |
-| Server Việt Nam/quốc tế | Không có | Có dropdown và Automatic |
-| Nút setup speedtestcpp | Không có | Có; `OK` thì tự ẩn |
-| Health action | Kiểm tra cơ bản | Có nút sửa Service/Nft/Tc/Config/Packages/integrity |
-| Statistics khi không có qdisc | Có thể blank/lỗi | Trả `status=disabled` và hướng dẫn |
-| Updater upstream | Có thể cập nhật bản gốc | Tắt để bảo vệ phần fork |
-| Đóng gói | Theo upstream/feed | Có `.ipk` chuẩn và `.apk` thử nghiệm |
+## Rate Limits
 
-### Lưu ý hiệu năng CAKE trên MT7621
+Mở `Network → QoSmate → Rate Limits`, chọn `Add` và nhập:
 
-`Basic Settings` chỉ là trần shaping. Trên Xiaomi Mi Router 3G, CAKE ở mức trần
-cao vẫn xử lý toàn bộ lưu lượng WAN/IFB và có thể làm giảm download. Nếu cần full
-speed, stop/disable QoSmate; không dùng `800000`/`2000000` với mục đích “tăng tốc”.
-## View Clients trong Rate Limits
+- `Target Devices`: một IP (`192.168.1.45`), CIDR hoặc dải liên tục như
+  `192.168.1.10-192.168.1.60`.
+- `Limit mode`: `Per-IP`, `Shared range` hoặc `Shared range - Fair Share`.
+- Download/Upload value và đơn vị `MB/s`, `Mbps`, `KB/s` hoặc `Kbps`.
+- Bật `Enabled`, sau đó `Save & Apply`.
 
-Rate Limits hiển thị dải IP ở dạng rút gọn, ví dụ `192.168.0.10–192.168.0.60`.
-Nút `View Clients` mở danh sách từng IP trong rule, hostname/MAC nếu router biết,
-trạng thái Active/Online/Unused, số connection và tốc độ Download/Upload mẫu theo
-conntrack. Tốc độ cập nhật khoảng 3 giây; mẫu đầu tiên có thể là `—`. Nếu kernel
-không có conntrack, IP vẫn hiện nhưng live rate không khả dụng.
+Ý nghĩa các chế độ:
 
-Ghi chú Fair Share và Burst Factor nằm trong khối thu gọn phía trên bảng. Fair Share
-cần Root Qdisc CAKE và Host Isolation; Burst Factor `0` là strict, `1.0` xấp xỉ một
-giây burst ban đầu.
-## Nhận biết phiên bản fork trong Settings
+- `Per-IP`: mỗi IP có một bucket riêng. Ví dụ 5 MB/s nghĩa là mỗi IP có thể
+  dùng tối đa khoảng 5 MB/s.
+- `Shared range`: cả dải IP dùng chung một tổng bucket. Một thiết bị có thể
+  chiếm phần lớn tổng băng thông.
+- `Shared range - Fair Share`: dùng CAKE host isolation để các IP đang truyền
+  chia đều bucket; host không truyền không giữ băng thông. Nếu một IP dùng ít,
+  phần còn lại được IP khác sử dụng.
 
-Tab `Network → QoSmate → Settings` hiển thị `QoSmate fork build` cùng phiên bản,
-commit Git ngắn và thời điểm build ở ngay phía trên Version & Updates. Metadata
-được tạo tự động khi đóng gói `.ipk` hoặc `.apk`.
-Sau khi cài thành công, installer tự xóa thư mục tạm `/tmp/qosmate-fork`. Dùng
-`QOSMATE_KEEP_STAGE=1` nếu cần giữ package để debug; file cấu hình và manifest
-integrity của QoSmate vẫn được giữ nguyên.
+### Điều kiện Fair Share
+
+Trong `Settings`, chọn `Root Qdisc = CAKE`; trong tab `CAKE`, bật `Host
+Isolation`. Fair Share hiện phân loại trực tiếp IPv4 cụ thể. IPv6, IP set động
+hoặc nhiều rule Fair Share có thể dùng nftables fallback và hiển thị cảnh báo.
+
+### View Clients / View details
+
+Ở mỗi rule, cột Target được rút gọn thành IP hoặc range. Bấm `View Clients` để
+xem từng IP:
+
+- hostname/MAC nếu DHCP hoặc neighbor table biết;
+- trạng thái `Active`, `Online/idle` hoặc `Unused`;
+- số connection;
+- tốc độ Download/Upload mẫu, cập nhật khoảng 3 giây.
+
+Thiết bị phía sau router NAT phụ chỉ xuất hiện dưới IP của router phụ. Nếu
+conntrack không khả dụng, IP vẫn hiện nhưng live rate có thể là `—`.
+
+### Burst Factor
+
+`0` là giới hạn nghiêm ngặt. `1.0` cho phép burst ngắn ban đầu khoảng một giây;
+giá trị lớn hơn cho burst lớn hơn, không tăng tổng quota Fair Share.
+
+## Statistics và Service Status
+
+Tab `Statistics` hiển thị counter khi qdisc đang hoạt động. Nếu Download và
+Upload đều bằng `0`, trạng thái `disabled/no_qdisc` là bình thường, không phải
+lỗi.
+
+Trong Settings, nút Repair/Apply chỉ xuất hiện khi Service, Nft, Tc, Config,
+Packages hoặc integrity có trạng thái cảnh báo/lỗi. Thành phần đã `OK` sẽ ẩn
+nút tương ứng.
+
+## Speed Test
+
+Mở `Network → QoSmate → Speed Test`.
+
+1. Nếu `SpeedTest++` là `NOT YET`, bấm `Setup speedtestcpp`; khi cài xong nút
+   tự ẩn và trạng thái thành `OK`.
+2. Chọn `Automatic (best server for WAN IP)` để SpeedTest++ tự chọn server gần
+   và phù hợp nhất với WAN.
+3. Hoặc chọn host cố định theo nhóm Việt Nam, Singapore, Nhật, Úc, Trung Quốc,
+   Hong Kong, Đài Loan, Thái Lan, Philippines, Indonesia, Ấn Độ, Trung Á, Nga,
+   châu Âu, Mỹ và châu Phi.
+4. Có thể chọn `Custom Ookla host:port` nếu có endpoint riêng.
+5. Bấm `Start speed test`.
+
+Kết quả hiển thị:
+
+- Download/Upload theo Mbps và MB/s;
+- Ping và Jitter theo ms;
+- engine `speedtestcpp` và host đã dùng.
+
+Một số server trả `ping=0` trong JSON. Ứng dụng sẽ tự ping ICMP trung bình 3
+lần để hiển thị RTT; nếu server chặn ICMP thì hiển thị `?`. Host cố định có thể
+thay đổi hoặc tạm ngừng, nên chuyển về `Automatic` nếu test lỗi.
+
+Speed test chạy từ chính router qua WAN, không đo riêng một client LAN và không
+phản ánh trực tiếp giới hạn của một IP trong Rate Limits.
+
+## Nhận biết phiên bản
+
+`Network → QoSmate → Settings` hiển thị banner `QoSmate fork build`, phiên bản,
+commit Git ngắn và thời điểm build. Sau cập nhật, nếu chưa thấy thay đổi hãy
+refresh lại LuCI.
+
+## Tắt hoặc gỡ ứng dụng
+
+Tắt tạm mà không gỡ:
+
+```sh
+/etc/init.d/qosmate stop
+/etc/init.d/qosmate disable
+```
+
+Gỡ package trên OpenWrt 24.x:
+
+```sh
+opkg remove luci-app-qosmate qosmate
+```
+
+Trên OpenWrt 25.x:
+
+```sh
+apk del luci-app-qosmate qosmate
+```
+
+File cấu hình `/etc/config/qosmate` có thể được giữ lại để khôi phục sau này.

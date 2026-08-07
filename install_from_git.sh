@@ -3,6 +3,8 @@
 # Public release repository:
 #   https://github.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release
 #   wget -qO- https://raw.githubusercontent.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release/main/install_from_git.sh | sh
+# Update an existing installation with shaping kept off:
+#   QOSMATE_ENABLE=0 sh -c "$(wget -qO- https://raw.githubusercontent.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release/main/install_from_git.sh)"
 # Optional: QOSMATE_REPO_URL=https://github.com/me/qosmate QOSMATE_REF=main sh install_from_git.sh
 
 set -eu

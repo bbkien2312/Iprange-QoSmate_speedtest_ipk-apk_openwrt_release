@@ -147,6 +147,16 @@ Repository release public:
 wget -qO- https://raw.githubusercontent.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release/main/install_from_git.sh | sh
 ```
 
+Để cập nhật fork đang có lên phiên bản mới nhất, giữ cấu hình và không bật
+shaping:
+
+```sh
+QOSMATE_ENABLE=0 sh -c "$(wget -qO- https://raw.githubusercontent.com/bbkien2312/Iprange-QoSmate_speedtest_ipk-apk_openwrt_release/main/install_from_git.sh)"
+```
+
+Chỉ dùng `QOSMATE_ENABLE=1` nếu muốn cập nhật xong rồi restart service và áp dụng
+shaping hiện tại.
+
 Installer tự nhận `opkg` (OpenWrt 24.x) hoặc `apk` (OpenWrt 25.x), tải package
 vào `/tmp/qosmate-fork`, cài đặt rồi restart `rpcd`/`uhttpd`. Script không ghi
 đè UCI và không tự bật shaping. Muốn bật service, đặt `QOSMATE_ENABLE=1`.
